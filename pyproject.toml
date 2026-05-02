@@ -1,0 +1,38 @@
+[project]
+name = "RBIVoiceInput"
+version = "1.0.0"
+requires-python = ">=3.13"
+dependencies = [
+    "google-api-python-client==2.149.0",
+    "google-cloud-speech==2.38.0",
+    "Pillow>=11.0.0",
+    "pynput==1.7.7",
+    "PyAudio==0.2.14",
+    "pyperclip==1.9.0",
+    "pystray>=0.19.5",
+    "python-dotenv==1.1.1",
+    "pywin32-ctypes==0.2.3",
+]
+
+[dependency-groups]
+dev = [
+    "coverage==7.9.2",
+    "pyinstaller==6.14.2",
+    "pyright==1.1.409",
+    "pytest==8.4.1",
+    "pytest-cov==6.2.1",
+    "pytest-mock==3.14.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+pythonVersion = "3.13"
+include = ["app", "service", "utils", "tests"]
+exclude = ["scripts"]
+reportMissingTypeStubs = false
+reportUnusedVariable = true
+reportUnusedImport = true
