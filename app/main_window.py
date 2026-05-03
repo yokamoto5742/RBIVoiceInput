@@ -1,6 +1,7 @@
 import logging
 import time
 import tkinter as tk
+from tkinter import messagebox
 from typing import Callable
 
 from app.notification_manager import NotificationManager
@@ -32,6 +33,7 @@ class VoiceInputManager:
             'toggle_punctuation': self.toggle_punctuation,
             'reload_audio': lambda: None,
             'hide_window': hide_callback,
+            'clear_web': self.clear_web,
         })
         self.ui_components.setup_ui(version)
 
@@ -40,6 +42,7 @@ class VoiceInputManager:
             'toggle_punctuation': self.toggle_punctuation,
             'reload_audio': self.ui_components.reload_latest_audio,
             'hide_window': hide_callback,
+            'clear_web': self.clear_web,
         })
 
         recording_lifecycle.wire_ui_callbacks(
@@ -60,6 +63,14 @@ class VoiceInputManager:
 
     def toggle_recording(self) -> None:
         self.recording_lifecycle.toggle_recording()
+
+    def clear_web(self) -> None:
+        if not self.recording_lifecycle.firestore_output.is_available():
+            messagebox.showwarning('警告', 'Firestore が未設定のためWebクリアできません')
+            return
+        if not messagebox.askyesno('確認', 'Web表示の文字起こし結果を全て削除しますか？'):
+            return
+        self.recording_lifecycle.firestore_output.clear_segments()
 
     def toggle_punctuation(self) -> None:
         use_punctuation = not self.recording_lifecycle.use_punctuation

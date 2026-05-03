@@ -3,19 +3,19 @@ import os
 import threading
 import time
 import tkinter as tk
-from typing import Any, Callable, Dict
+from typing import Any, Callable, Dict, Optional
 
 from app.ui_queue_processor import UIQueueProcessor
 from service.audio_file_manager import AudioFileManager
 from service.audio_recorder import AudioRecorder
-from service.docs_output import DocsOutput
+from service.firestore_output import FirestoreOutput
 from service.recording_timer import RecordingTimer
 from service.transcription_handler import TranscriptionHandler
 from utils.app_config import AppConfig
 
 
 class RecordingLifecycle:
-    """録音開始、文字起こし、Docs出力までのライフサイクルを管理"""
+    """録音開始、文字起こし、Firestore出力までのライフサイクルを管理"""
 
     def __init__(
             self,
@@ -24,7 +24,7 @@ class RecordingLifecycle:
             recorder: AudioRecorder,
             audio_file_manager: AudioFileManager,
             transcription_handler: TranscriptionHandler,
-            docs_output: DocsOutput,
+            firestore_output: FirestoreOutput,
             ui_processor: UIQueueProcessor,
             notification_callback: Callable
     ):
@@ -33,7 +33,7 @@ class RecordingLifecycle:
         self.recorder = recorder
         self.audio_file_manager = audio_file_manager
         self.transcription_handler = transcription_handler
-        self.docs_output = docs_output
+        self.firestore_output = firestore_output
         self.ui_processor = ui_processor
         self.show_notification = notification_callback
 
@@ -47,6 +47,9 @@ class RecordingLifecycle:
             lambda: self.recorder.is_recording,
             self._stop_recording_process
         )
+
+        self._presence_ping_id: Optional[str] = None
+        self._presence_ping_interval_ms = max(1, config.presence_ping_interval) * 1000
 
         self.audio_file_manager.cleanup_temp_files()
 
@@ -72,8 +75,8 @@ class RecordingLifecycle:
                 self._ui_callbacks['update_record_button'](False)
                 if self.recorder.is_recording:
                     self.recorder.stop_recording()
-                if self.docs_output.is_available():
-                    self.docs_output.clear_placeholder()
+                self._stop_presence_ping()
+                self.firestore_output.update_presence(False)
         except Exception as e:
             logging.error(f'エラーハンドリング中にエラー: {str(e)}')
 
@@ -104,8 +107,8 @@ class RecordingLifecycle:
 
         self.transcription_handler.reset_cancel()
         self.recorder.start_recording()
-        if self.docs_output.is_available():
-            self.docs_output.show_placeholder()
+        self.firestore_output.update_presence(True)
+        self._start_presence_ping()
         self._ui_callbacks['update_record_button'](True)
         self._ui_callbacks['update_status_label'](
             f'音声入力中... ({self.config.toggle_recording_key}キーで停止)'
@@ -139,6 +142,9 @@ class RecordingLifecycle:
         try:
             frames, sample_rate = self.recorder.stop_recording()
             logging.info('音声データを取得しました')
+
+            self._stop_presence_ping()
+            self.firestore_output.update_presence(False)
 
             self._ui_callbacks['update_record_button'](False)
             self._ui_callbacks['update_status_label']('テキスト出力中...')
@@ -199,20 +205,58 @@ class RecordingLifecycle:
             )
 
     def _safe_ui_update(self, text: str) -> None:
-        """文字起こし完了後にDocsへ追記する"""
+        """文字起こし完了後にFirestoreへ追記する"""
         try:
             logging.debug(f'_safe_ui_update開始: text長={len(text)}')
             if not self.ui_processor.is_ui_valid():
                 logging.warning('UIが無効なため、UI更新をスキップします')
                 return
-            self.docs_output.append(text)
+            self.firestore_output.append(text)
         except Exception as e:
             logging.error(f'UI更新中にエラー: {str(e)}')
+
+    def _start_presence_ping(self) -> None:
+        """録音中の lastPing を定期更新する"""
+        if not self.firestore_output.is_available():
+            return
+        if not self.ui_processor.is_ui_valid():
+            return
+        try:
+            self._presence_ping_id = self.master.after(
+                self._presence_ping_interval_ms, self._presence_ping_tick
+            )
+        except Exception as e:
+            logging.error(f'presence ping 起動中にエラー: {str(e)}')
+
+    def _presence_ping_tick(self) -> None:
+        try:
+            if not self.recorder.is_recording:
+                self._presence_ping_id = None
+                return
+            self.firestore_output.update_presence(True)
+            if self.ui_processor.is_ui_valid():
+                self._presence_ping_id = self.master.after(
+                    self._presence_ping_interval_ms, self._presence_ping_tick
+                )
+        except Exception as e:
+            logging.error(f'presence ping 中にエラー: {str(e)}')
+
+    def _stop_presence_ping(self) -> None:
+        if self._presence_ping_id is None:
+            return
+        try:
+            if self.ui_processor.is_ui_valid():
+                self.master.after_cancel(self._presence_ping_id)
+        except Exception:
+            pass
+        self._presence_ping_id = None
 
     def cleanup(self) -> None:
         """リソースをクリーンアップする"""
         try:
             logging.info('RecordingLifecycle クリーンアップ開始')
+            self._stop_presence_ping()
+            self.firestore_output.update_presence(False)
             self.ui_processor.shutdown()
             self.transcription_handler.cancel()
 

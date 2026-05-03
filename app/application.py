@@ -6,11 +6,11 @@ from app.main_window import VoiceInputManager
 from app.notification_manager import NotificationManager
 from app.tray_manager import TrayManager
 from app.ui_queue_processor import UIQueueProcessor
-from external_service.google_docs_api import setup_google_docs_client
+from external_service.firestore_api import setup_firestore_client
 from external_service.google_stt_api import setup_google_stt_client
 from service.audio_file_manager import AudioFileManager
 from service.audio_recorder import AudioRecorder
-from service.docs_output import DocsOutput
+from service.firestore_output import FirestoreOutput
 from service.recording_lifecycle import RecordingLifecycle
 from service.text_transformer import load_replacements
 from service.transcription_handler import TranscriptionHandler
@@ -47,15 +47,18 @@ class Application:
         notification_manager = NotificationManager(root, config)
 
         try:
-            docs_client = setup_google_docs_client(config)
+            firestore_client = setup_firestore_client(config)
         except Exception as e:
-            logging.error(f'Google Docsクライアント初期化失敗: {e}')
-            docs_client = None
+            logging.error(f'Firestoreクライアント初期化失敗: {e}')
+            firestore_client = None
 
-        docs_output = DocsOutput(
-            docs_client, replacements, notification_manager.show_timed_message,
-            config.google_docs_placeholder_text,
-            config.google_docs_placeholder_wait_timeout,
+        firestore_output = FirestoreOutput(
+            firestore_client,
+            config.room_id,
+            config.firestore_collection,
+            config.firestore_ttl_minutes,
+            replacements,
+            notification_manager.show_timed_message,
         )
 
         transcription_handler = TranscriptionHandler(
@@ -64,7 +67,7 @@ class Application:
 
         recording_lifecycle = RecordingLifecycle(
             root, config, recorder, audio_file_manager,
-            transcription_handler, docs_output,
+            transcription_handler, firestore_output,
             ui_processor, notification_manager.show_timed_message
         )
 

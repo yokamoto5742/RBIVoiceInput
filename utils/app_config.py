@@ -132,18 +132,30 @@ class AppConfig:
     def window_height(self) -> int:
         return get_config_value(self._config, 'WINDOW', 'HEIGHT', 450)
 
-    # --- GOOGLE_DOCS ---
+    # --- FIRESTORE ---
     @property
-    def google_docs_url(self) -> str:
-        return get_config_value(self._config, 'GOOGLE_DOCS', 'DOCS_URL', '')
+    def firestore_project_id(self) -> str:
+        return get_config_value(self._config, 'FIRESTORE', 'PROJECT_ID', '')
 
     @property
-    def google_docs_placeholder_text(self) -> str:
-        return get_config_value(self._config, 'GOOGLE_DOCS', 'PLACEHOLDER_TEXT', '音声入力中…(60秒以内)')
+    def room_id(self) -> str:
+        return get_config_value(self._config, 'FIRESTORE', 'ROOM_ID', '')
 
     @property
-    def google_docs_placeholder_wait_timeout(self) -> int:
-        return get_config_value(self._config, 'GOOGLE_DOCS', 'PLACEHOLDER_WAIT_TIMEOUT', 10)
+    def firestore_collection(self) -> str:
+        return get_config_value(self._config, 'FIRESTORE', 'COLLECTION', 'rooms')
+
+    @property
+    def firestore_ttl_minutes(self) -> int:
+        return get_config_value(self._config, 'FIRESTORE', 'TTL_MINUTES', 10)
+
+    @property
+    def viewer_base_url(self) -> str:
+        return get_config_value(self._config, 'FIRESTORE', 'VIEWER_BASE_URL', '')
+
+    @property
+    def presence_ping_interval(self) -> int:
+        return get_config_value(self._config, 'FIRESTORE', 'PRESENCE_PING_INTERVAL', 10)
 
     # --- OPTIONS ---
     @property
