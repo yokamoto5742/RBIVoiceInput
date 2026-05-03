@@ -34,7 +34,7 @@ VIEWER_BASE_URL = https://rbivoice.example.com
 ```
 
 `.env` に `FIREBASE_CREDENTIALS_JSON`（サービスアカウントキーのパス or JSON 文字列）を追加。
-既存の `GOOGLE_CREDENTIALS_JSON` を STT 用と Firestore 用で共用するか、別ファイルにするかは運用判断（同一プロジェクトなら共用可）。
+既存の `GOOGLE_CREDENTIALS_JSON` を STT 用と Firestore 用で共用
 
 ## 依存追加
 
