@@ -1,5 +1,5 @@
 import threading
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from service.firestore_output import FirestoreOutput
 
@@ -60,25 +60,64 @@ class TestFirestoreOutputAppend:
         output.append('')
         client.collection.assert_not_called()
 
-    def test_appends_to_segments(self):
+    def test_appends_to_transcript_via_transaction(self):
         client = MagicMock()
-        output, _ = _make_output(client=client)
-        done = _wait_for_thread(output, '_append_in_thread')
+        # transactional デコレータをパススルーにする
+        with patch(
+                'service.firestore_output.firestore.transactional',
+                side_effect=lambda fn: fn,
+        ):
+            output, _ = _make_output(client=client)
+            done = _wait_for_thread(output, '_append_in_thread')
 
-        output.append('こんにちは')
-        done.wait(timeout=2.0)
+            # 既存 doc なし → set 経路
+            transcript_doc = (
+                client.collection.return_value
+                .document.return_value
+                .collection.return_value
+                .document.return_value
+            )
+            snap = transcript_doc.get.return_value
+            snap.exists = False
 
-        segments = (
-            client.collection.return_value
-            .document.return_value
-            .collection.return_value
-        )
-        segments.add.assert_called_once()
-        payload = segments.add.call_args.args[0]
-        assert payload['text'] == 'こんにちは'
-        assert payload['senderId'] == 'room1'
-        assert 'createdAt' in payload
-        assert 'expiresAt' in payload
+            output.append('こんにちは')
+            done.wait(timeout=2.0)
+
+            transaction = client.transaction.return_value
+            transaction.set.assert_called_once()
+            ref_arg, payload = transaction.set.call_args.args
+            assert ref_arg is transcript_doc
+            assert payload['text'] == 'こんにちは\n'
+            assert 'updatedAt' in payload
+            assert 'expiresAt' in payload
+            assert 'senderId' not in payload
+
+    def test_appends_concatenates_existing_text(self):
+        client = MagicMock()
+        with patch(
+                'service.firestore_output.firestore.transactional',
+                side_effect=lambda fn: fn,
+        ):
+            output, _ = _make_output(client=client)
+            done = _wait_for_thread(output, '_append_in_thread')
+
+            transcript_doc = (
+                client.collection.return_value
+                .document.return_value
+                .collection.return_value
+                .document.return_value
+            )
+            snap = transcript_doc.get.return_value
+            snap.exists = True
+            snap.get.return_value = '既存テキスト\n'
+
+            output.append('追加')
+            done.wait(timeout=2.0)
+
+            transaction = client.transaction.return_value
+            transaction.update.assert_called_once()
+            _, payload = transaction.update.call_args.args
+            assert payload['text'] == '既存テキスト\n追加\n'
 
 
 class TestFirestoreOutputUpdatePresence:
@@ -103,32 +142,5 @@ class TestFirestoreOutputUpdatePresence:
         meta.set.assert_called_once()
         payload = meta.set.call_args.args[0]
         assert payload['recording'] is True
-        assert payload['senderId'] == 'room1'
-
-
-class TestFirestoreOutputClearSegments:
-    def test_shows_error_when_no_client(self):
-        output, error_cb = _make_output(client=None)
-        output.clear_segments()
-        assert error_cb.called
-
-    def test_deletes_all_segments(self):
-        client = MagicMock()
-        batch = client.batch.return_value
-        doc1 = MagicMock()
-        doc2 = MagicMock()
-        segments = (
-            client.collection.return_value
-            .document.return_value
-            .collection.return_value
-        )
-        segments.stream.return_value = [doc1, doc2]
-
-        output, _ = _make_output(client=client)
-        done = _wait_for_thread(output, '_clear_segments_in_thread')
-
-        output.clear_segments()
-        done.wait(timeout=2.0)
-
-        assert batch.delete.call_count == 2
-        batch.commit.assert_called()
+        assert 'lastPing' in payload
+        assert 'senderId' not in payload

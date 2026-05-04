@@ -21,7 +21,6 @@ class UIComponents:
         self.callbacks = callbacks
         self._toggle_recording = callbacks.get('toggle_recording', lambda: None)
         self._toggle_punctuation = callbacks.get('toggle_punctuation', lambda: None)
-        self._clear_web = callbacks.get('clear_web', lambda: None)
         self.status_label: Optional[tk.Label] = None
         self.punctuation_status_label: Optional[tk.Label] = None
         self.punctuation_button: Optional[tk.Button] = None
@@ -30,7 +29,6 @@ class UIComponents:
         self.load_audio_button: Optional[tk.Button] = None
         self.technical_terms_button: Optional[tk.Button] = None
         self.replace_button: Optional[tk.Button] = None
-        self.clear_web_button: Optional[tk.Button] = None
         self.close_button: Optional[tk.Button] = None
 
     def setup_ui(self, version: str) -> None:
@@ -92,14 +90,6 @@ class UIComponents:
         )
         self.replace_button.pack(pady=5)
 
-        self.clear_web_button = tk.Button(
-            self.master,
-            text='Webクリア',
-            command=self._clear_web,
-            width=15
-        )
-        self.clear_web_button.pack(pady=5)
-
         self.close_button = tk.Button(
             self.master,
             text=f'閉じる:{self.config.exit_app_key}',
@@ -118,9 +108,6 @@ class UIComponents:
         self.callbacks = callbacks
         self._toggle_recording = callbacks.get('toggle_recording', self._toggle_recording)
         self._toggle_punctuation = callbacks.get('toggle_punctuation', self._toggle_punctuation)
-        self._clear_web = callbacks.get('clear_web', self._clear_web)
-        if self.clear_web_button is not None:
-            self.clear_web_button.config(command=self._clear_web)
 
     def update_record_button(self, is_recording: bool) -> None:
         assert self.record_button is not None
