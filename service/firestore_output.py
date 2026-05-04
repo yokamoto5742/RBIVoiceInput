@@ -44,7 +44,7 @@ class FirestoreOutput:
             self._client.collection(self._collection)
             .document(self._room_id)
             .collection('meta')
-            .document('presence')
+            .document('state')
         )
 
     def append(self, text: str) -> None:
