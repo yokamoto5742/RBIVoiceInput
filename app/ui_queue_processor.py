@@ -60,9 +60,5 @@ class UIQueueProcessor:
         except (tk.TclError, Exception):
             return False
 
-    @property
-    def is_shutting_down(self) -> bool:
-        return self._is_shutting_down
-
     def shutdown(self) -> None:
         self._is_shutting_down = True

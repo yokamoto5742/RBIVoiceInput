@@ -18,13 +18,11 @@ class TranscriptionHandler:
             client: Any,
             audio_file_manager: AudioFileManager,
             ui_processor: UIQueueProcessor,
-            use_punctuation: bool
     ):
         self.config = config
         self.client = client
         self.audio_file_manager = audio_file_manager
         self.ui_processor = ui_processor
-        self.use_punctuation = use_punctuation
 
         self.cancel_processing = False
         self.processing_thread: Optional[threading.Thread] = None
@@ -67,8 +65,9 @@ class TranscriptionHandler:
             if not transcription:
                 raise ValueError('音声ファイルの文字起こしに失敗しました')
 
-            logging.debug(f'句読点処理開始: use_punctuation={self.use_punctuation}')
-            transcription = process_punctuation(transcription, self.use_punctuation)
+            use_punctuation = self.config.use_punctuation
+            logging.debug(f'句読点処理開始: use_punctuation={use_punctuation}')
+            transcription = process_punctuation(transcription, use_punctuation)
             logging.debug('句読点処理完了')
 
             if self.cancel_processing:
@@ -97,21 +96,14 @@ class TranscriptionHandler:
                 self.config,
                 self.client
             )
-            if transcription:
-                transcription = process_punctuation(transcription, self.use_punctuation)
-                on_complete(transcription)
-            else:
+            if not transcription:
                 raise ValueError('音声ファイルの処理に失敗しました')
-        except Exception as e:
-            on_error(str(e))
 
-    def wait_for_processing(self, timeout: float = 5.0) -> bool:
-        """処理スレッドの完了を待機する"""
-        if self.processing_thread and self.processing_thread.is_alive():
-            logging.info('処理スレッドの完了を待機中...')
-            self.processing_thread.join(timeout=timeout)
-            return not self.processing_thread.is_alive()
-        return True
+            transcription = process_punctuation(transcription, self.config.use_punctuation)
+            self.ui_processor.schedule_callback(on_complete, transcription)
+        except Exception as e:
+            logging.error(f'音声ファイル処理中にエラー: {str(e)}')
+            self.ui_processor.schedule_callback(on_error, str(e))
 
     def cancel(self) -> None:
         """処理をキャンセルする"""

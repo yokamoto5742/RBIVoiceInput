@@ -258,11 +258,10 @@ class TestUIQueueProcessorShutdown:
         mock_master = Mock(spec=tk.Tk)
         processor = UIQueueProcessor(mock_master)
 
-        assert processor.is_shutting_down is False
+        assert processor._is_shutting_down is False
 
         processor.shutdown()
 
-        assert processor.is_shutting_down is True
         assert processor._is_shutting_down is True
 
     def test_shutdown_prevents_new_callbacks(self):
@@ -276,18 +275,6 @@ class TestUIQueueProcessorShutdown:
         processor.schedule_callback(mock_callback)
 
         assert processor._ui_queue.empty()
-
-    def test_is_shutting_down_property(self):
-        """正常系: is_shutting_downプロパティの動作確認"""
-        mock_master = Mock(spec=tk.Tk)
-        processor = UIQueueProcessor(mock_master)
-
-        assert processor.is_shutting_down is False
-
-        processor._is_shutting_down = True
-
-        assert processor.is_shutting_down is True
-
 
 class TestUIQueueProcessorThreadSafety:
     """UIQueueProcessorのスレッドセーフ性のテストクラス"""

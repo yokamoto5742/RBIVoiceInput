@@ -206,7 +206,10 @@ def transcribe_audio(
     """保存済み音声ファイルを読み込んで文字起こしする"""
     is_valid, error_msg = validate_audio_file(audio_file_path)
     if not is_valid:
-        logging.warning(error_msg) if '未指定' in str(error_msg) else logging.error(error_msg)
+        if '未指定' in str(error_msg):
+            logging.warning(error_msg)
+        else:
+            logging.error(error_msg)
         return None
 
     try:

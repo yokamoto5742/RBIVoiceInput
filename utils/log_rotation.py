@@ -125,31 +125,3 @@ def setup_debug_logging(config=None):
     except Exception as e:
         logging.error(f"デバッグログ設定中にエラーが発生しました: {str(e)}")
         return None
-
-
-def get_log_info(config=None):
-    if config is None:
-        config = load_config()
-
-    try:
-        log_directory = get_config_value(config, 'LOGGING', 'log_directory', 'logs')
-        if not os.path.isabs(log_directory):
-            project_root = os.path.dirname(os.path.dirname(__file__))
-            log_directory = os.path.join(project_root, log_directory)
-
-        project_name = get_config_value(config, 'LOGGING', 'project_name', 'RBIVoiceInput')
-        log_retention_days = get_config_value(config, 'LOGGING', 'log_retention_days', 7)
-        debug_mode = get_config_value(config, 'LOGGING', 'debug_mode', False)
-
-        return {
-            'log_directory': log_directory,
-            'project_name': project_name,
-            'log_retention_days': log_retention_days,
-            'debug_mode': debug_mode,
-            'main_log_file': os.path.join(log_directory, f'{project_name}.log'),
-            'debug_log_file': os.path.join(log_directory, 'debug.log') if debug_mode else None
-        }
-
-    except Exception as e:
-        logging.error(f"ログ情報取得中にエラーが発生しました: {str(e)}")
-        return None

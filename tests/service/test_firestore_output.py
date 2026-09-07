@@ -4,6 +4,13 @@ from unittest.mock import MagicMock, patch
 from service.firestore_output import FirestoreOutput
 
 
+def _make_ui_processor() -> MagicMock:
+    """schedule_callback をその場で実行する UIQueueProcessor スタブ"""
+    ui_processor = MagicMock()
+    ui_processor.schedule_callback.side_effect = lambda cb, *args: cb(*args)
+    return ui_processor
+
+
 def _make_output(client: MagicMock | None = None) -> tuple[FirestoreOutput, MagicMock]:
     error_cb = MagicMock()
     output = FirestoreOutput(
@@ -13,6 +20,7 @@ def _make_output(client: MagicMock | None = None) -> tuple[FirestoreOutput, Magi
         ttl_minutes=10,
         replacements={},
         error_callback=error_cb,
+        ui_processor=_make_ui_processor(),
     )
     return output, error_cb
 
@@ -44,6 +52,7 @@ class TestFirestoreOutputAvailability:
         output = FirestoreOutput(
             client=client, room_id='', collection='rooms',
             ttl_minutes=10, replacements={}, error_callback=MagicMock(),
+            ui_processor=_make_ui_processor(),
         )
         assert output.is_available() is False
 
@@ -118,6 +127,32 @@ class TestFirestoreOutputAppend:
             transaction.update.assert_called_once()
             _, payload = transaction.update.call_args.args
             assert payload['text'] == '既存テキスト\n追加\n'
+
+
+class TestFirestoreOutputErrorNotification:
+    def test_worker_thread_error_goes_through_ui_processor(self):
+        """ワーカースレッドのエラー通知は UIQueueProcessor 経由で行われる"""
+        client = MagicMock()
+        error_cb = MagicMock()
+        ui_processor = MagicMock()
+        output = FirestoreOutput(
+            client=client, room_id='room1', collection='rooms',
+            ttl_minutes=10, replacements={}, error_callback=error_cb,
+            ui_processor=ui_processor,
+        )
+        client.transaction.side_effect = RuntimeError('接続失敗')
+        done = _wait_for_thread(output, '_append_in_thread')
+
+        output.append('テスト')
+        done.wait(timeout=2.0)
+
+        # error_callback を直接呼ばず、キュー経由で委譲していること
+        error_cb.assert_not_called()
+        ui_processor.schedule_callback.assert_called_once()
+        callback, title, message = ui_processor.schedule_callback.call_args.args
+        assert callback is error_cb
+        assert title == 'エラー'
+        assert 'Firestoreへの追記に失敗しました' in message
 
 
 class TestFirestoreOutputUpdatePresence:

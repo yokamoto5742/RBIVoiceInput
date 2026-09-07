@@ -125,7 +125,7 @@ class TestAudioRecorderStartRecording:
         recorder = AudioRecorder(dict_to_app_config(self.mock_config))
         recorder.start_recording()
 
-        assert recorder.is_recording is True
+        assert recorder.is_recording is False
         assert recorder.p is None
         assert recorder.stream is None
 
@@ -140,7 +140,7 @@ class TestAudioRecorderStartRecording:
         recorder = AudioRecorder(dict_to_app_config(self.mock_config))
         recorder.start_recording()
 
-        assert recorder.is_recording is True
+        assert recorder.is_recording is False
         assert recorder.p == mock_pyaudio_instance
         assert recorder.stream is None
 

@@ -37,7 +37,6 @@ def _make_lifecycle(config_dict: dict | None = None):
     firestore_output.is_available.return_value = True
     ui_processor = Mock(spec=UIQueueProcessor)
     ui_processor.is_ui_valid.return_value = True
-    ui_processor.is_shutting_down = False
 
     notification_callback = Mock()
 
@@ -83,8 +82,8 @@ class TestRecordingLifecycleInit:
         lifecycle, *_ = _make_lifecycle()
         update_btn, update_label = _wire_callbacks(lifecycle)
 
-        assert lifecycle._ui_callbacks['update_record_button'] == update_btn
-        assert lifecycle._ui_callbacks['update_status_label'] == update_label
+        assert lifecycle._update_record_button == update_btn
+        assert lifecycle._update_status_label == update_label
 
 
 class TestRecordingLifecycleToggleRecording:
@@ -189,22 +188,38 @@ class TestRecordingLifecycleStopRecording:
             mock_handler.assert_called_once()
 
 
-class TestRecordingLifecycleUsePunctuation:
-    """use_punctuationプロパティのテストクラス"""
+class TestRecordingLifecycleHandleAudioFile:
+    """handle_audio_file()のテストクラス"""
 
-    def test_use_punctuation_getter(self):
-        """正常系: getterが正常に動作"""
-        lifecycle, *_ = _make_lifecycle()
-        assert lifecycle.use_punctuation is True
+    def setup_method(self):
+        self.lifecycle, self.master, _, _, self.th, _, _ = _make_lifecycle()
+        self.update_btn, self.update_label = _wire_callbacks(self.lifecycle)
 
-    def test_use_punctuation_setter(self):
-        """正常系: setterがTranscriptionHandlerも更新"""
-        lifecycle, _, _, _, th, *_ = _make_lifecycle()
+    @patch('service.recording_lifecycle.os.path.exists', return_value=True)
+    @patch('service.recording_lifecycle.threading.Thread')
+    def test_handle_audio_file_runs_in_worker_thread(self, mock_thread_class, _mock_exists):
+        """正常系: 文字起こしはワーカースレッドで実行される"""
+        mock_thread = Mock()
+        mock_thread_class.return_value = mock_thread
 
-        lifecycle.use_punctuation = False
+        self.lifecycle.handle_audio_file('/test/audio.wav')
 
-        assert lifecycle.use_punctuation is False
-        assert th.use_punctuation is False
+        # UIスレッドを塞がないこと
+        self.th.handle_audio_file.assert_not_called()
+        assert mock_thread_class.call_args.kwargs['target'] == self.th.handle_audio_file
+        assert mock_thread_class.call_args.kwargs['args'][0] == '/test/audio.wav'
+        mock_thread.start.assert_called_once()
+        self.update_label.assert_called_once_with('音声ファイル処理中...')
+
+    @patch('service.recording_lifecycle.os.path.exists', return_value=False)
+    def test_handle_audio_file_missing_file(self, _mock_exists):
+        """異常系: ファイルが存在しない場合は通知して終了"""
+        self.lifecycle.handle_audio_file('/test/missing.wav')
+
+        self.lifecycle.show_notification.assert_called_once_with(  # type: ignore[attr-defined]
+            'エラー', '音声ファイルが見つかりません'
+        )
+        self.th.handle_audio_file.assert_not_called()
 
 
 class TestRecordingLifecycleSafeUiUpdate:
@@ -243,19 +258,21 @@ class TestRecordingLifecycleCleanup:
 
         ui.shutdown.assert_called_once()
         th.cancel.assert_called_once()
-        lifecycle.recording_timer.cleanup.assert_called()  # type: ignore[attr-defined]
+        lifecycle.recording_timer.cancel.assert_called()  # type: ignore[attr-defined]
         _afm.cleanup_temp_files.assert_called()
 
-    def test_cleanup_stops_active_recording(self):
-        """正常系: 録音中の場合は停止する"""
+    def test_cleanup_stops_recorder_without_transcription(self):
+        """正常系: 録音中でも文字起こしを開始せずに録音だけ止める"""
         lifecycle, _, recorder, _, th, _, _ = _make_lifecycle()
         _wire_callbacks(lifecycle)
         recorder.is_recording = True
         th.processing_thread = None
 
-        with patch.object(lifecycle, 'stop_recording') as mock_stop:
+        with patch.object(lifecycle, '_stop_recording_process') as mock_process:
             lifecycle.cleanup()
-            mock_stop.assert_called_once()
+
+        recorder.stop_recording.assert_called_once()
+        mock_process.assert_not_called()
 
     def test_cleanup_waits_for_processing_thread(self):
         """正常系: 処理スレッドの完了を待機する"""

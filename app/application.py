@@ -59,10 +59,11 @@ class Application:
             config.firestore_ttl_minutes,
             replacements,
             notification_manager.show_timed_message,
+            ui_processor,
         )
 
         transcription_handler = TranscriptionHandler(
-            config, client, audio_file_manager, ui_processor, config.use_punctuation
+            config, client, audio_file_manager, ui_processor
         )
 
         recording_lifecycle = RecordingLifecycle(

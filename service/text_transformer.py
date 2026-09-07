@@ -58,7 +58,7 @@ def remove_ja_en_spaces(text: str) -> str:
 def replace_text(text: str, replacements: Dict[str, str]) -> str:
     """置換辞書に従ってテキストを変換する"""
     if not text:
-        logging.error('入力テキストが空です')
+        logging.warning('入力テキストが空です')
         return ''
 
     if not replacements:

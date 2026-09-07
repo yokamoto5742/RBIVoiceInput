@@ -76,7 +76,3 @@ class RecordingTimer:
                     self._five_second_notification_shown = True
         except Exception as e:
             logging.error(f'通知表示中にエラー: {str(e)}')
-
-    def cleanup(self) -> None:
-        """リソースをクリーンアップ"""
-        self.cancel()

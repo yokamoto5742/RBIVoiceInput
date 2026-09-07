@@ -79,13 +79,6 @@ class TestAppConfigFormatting:
         config.use_punctuation = True
         assert config.use_punctuation is True
 
-    def test_use_comma_setter(self):
-        """正常系: use_commaのsetter"""
-        config = dict_to_app_config({'FORMATTING': {'USE_COMMA': 'False'}})
-        config.use_comma = True
-        assert config.use_comma is True
-
-
 class TestAppConfigKeys:
     """キー設定プロパティのテストクラス"""
 

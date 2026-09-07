@@ -1,5 +1,4 @@
 import logging
-import time
 import tkinter as tk
 from typing import Callable
 
@@ -27,18 +26,10 @@ class VoiceInputManager:
         self.notification_manager = notification_manager
         self.recording_lifecycle = recording_lifecycle
 
-        self.ui_components = UIComponents(master, config, {
+        self.ui_components = UIComponents(master, config, version, {
             'toggle_recording': self.toggle_recording,
             'toggle_punctuation': self.toggle_punctuation,
-            'reload_audio': lambda: None,
-            'hide_window': hide_callback,
-        })
-        self.ui_components.setup_ui(version)
-
-        self.ui_components.update_callbacks({
-            'toggle_recording': self.toggle_recording,
-            'toggle_punctuation': self.toggle_punctuation,
-            'reload_audio': self.ui_components.reload_latest_audio,
+            'audio_file_selected': recording_lifecycle.handle_audio_file,
             'hide_window': hide_callback,
         })
 
@@ -56,18 +47,14 @@ class VoiceInputManager:
             hide_callback,
         )
 
-        self.master.bind('<<LoadAudioFile>>', recording_lifecycle.handle_audio_file)
-
     def toggle_recording(self) -> None:
         self.recording_lifecycle.toggle_recording()
 
     def toggle_punctuation(self) -> None:
-        use_punctuation = not self.recording_lifecycle.use_punctuation
-        self.recording_lifecycle.use_punctuation = use_punctuation
+        use_punctuation = not self.config.use_punctuation
+        self.config.use_punctuation = use_punctuation
         self.ui_components.update_punctuation_button(use_punctuation)
         logging.info(f"現在句読点: {'あり' if use_punctuation else 'なし'}")
-        self.config.use_punctuation = use_punctuation
-        self.config.use_comma = use_punctuation
         save_config(self.config.raw_config)
 
     def close_application(self) -> None:
@@ -86,7 +73,6 @@ class VoiceInputManager:
                 except Exception as e:
                     logging.error(f'クリーンアップ失敗 ({name}): {str(e)}')
 
-        time.sleep(0.1)
         try:
             self.master.quit()
             self.master.destroy()

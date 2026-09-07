@@ -214,95 +214,6 @@ class TestShowTimedMessage:
         mock_label_class.assert_called_once_with(mock_popup, text=long_message)
 
 
-class TestShowErrorMessage:
-    """エラーメッセージ表示のテストクラス"""
-
-    def setup_method(self):
-        """各テストメソッドの前に実行される設定"""
-        self.mock_master = Mock(spec=tk.Tk)
-        self.mock_config = {
-            'KEYS': {
-                'TOGGLE_RECORDING': 'F1'
-            }
-        }
-        self.manager = NotificationManager(self.mock_master, dict_to_app_config(self.mock_config))
-
-    @patch.object(NotificationManager, 'show_timed_message')
-    def test_show_error_message_success(self, mock_show_timed):
-        """正常系: エラーメッセージ表示成功"""
-        # Act
-        self.manager.show_error_message("エラータイトル", "エラーメッセージ")
-
-        # Assert
-        mock_show_timed.assert_called_once_with("エラー: エラータイトル", "エラーメッセージ")
-
-    @patch.object(NotificationManager, 'show_timed_message')
-    def test_show_error_message_empty_title(self, mock_show_timed):
-        """境界値: 空のエラータイトル"""
-        # Act
-        self.manager.show_error_message("", "エラーメッセージ")
-
-        # Assert
-        mock_show_timed.assert_called_once_with("エラー: ", "エラーメッセージ")
-
-    @patch.object(NotificationManager, 'show_timed_message')
-    def test_show_error_message_exception(self, mock_show_timed, caplog):
-        """異常系: メッセージ表示時の例外"""
-        # Arrange
-        caplog.set_level(logging.ERROR)
-        mock_show_timed.side_effect = Exception("Display error")
-
-        # Act
-        self.manager.show_error_message("エラー", "メッセージ")
-
-        # Assert
-        assert "通知中にエラーが発生しました" in caplog.text
-
-
-class TestShowStatusMessage:
-    """ステータスメッセージ表示のテストクラス"""
-
-    def setup_method(self):
-        """各テストメソッドの前に実行される設定"""
-        self.mock_master = Mock(spec=tk.Tk)
-        self.mock_config = {
-            'KEYS': {
-                'TOGGLE_RECORDING': 'F1'
-            }
-        }
-        self.manager = NotificationManager(self.mock_master, dict_to_app_config(self.mock_config))
-
-    def test_show_status_message_success(self):
-        """正常系: ステータスメッセージ表示成功"""
-        # Act
-        self.manager.show_status_message("追加メッセージ")
-
-        # Assert
-        self.mock_master.after.assert_called_once()
-        call_args = self.mock_master.after.call_args
-        assert call_args[0][0] == 0  # delay
-
-    def test_show_status_message_empty_message(self):
-        """境界値: 空のステータスメッセージ"""
-        # Act
-        self.manager.show_status_message("")
-
-        # Assert
-        self.mock_master.after.assert_called_once()
-
-    def test_show_status_message_exception(self, caplog):
-        """異常系: ステータス更新時の例外"""
-        # Arrange
-        caplog.set_level(logging.ERROR)
-        self.mock_master.after.side_effect = Exception("After error")
-
-        # Act
-        self.manager.show_status_message("メッセージ")
-
-        # Assert
-        assert "ステータス更新中にエラーが発生しました" in caplog.text
-
-
 class TestDestroyPopup:
     """ポップアップ破棄のテストクラス"""
 
@@ -368,66 +279,6 @@ class TestDestroyPopup:
         # Assert
         assert "ポップアップ終了中にエラーが発生しました" in caplog.text
         assert self.manager.current_popup is None
-
-
-class TestUpdateStatusLabel:
-    """ステータスラベル更新のテストクラス"""
-
-    def setup_method(self):
-        """各テストメソッドの前に実行される設定"""
-        self.mock_master = Mock(spec=tk.Tk)
-        self.mock_config = {
-            'KEYS': {
-                'TOGGLE_RECORDING': 'F1'
-            }
-        }
-        self.manager = NotificationManager(self.mock_master, dict_to_app_config(self.mock_config))
-
-    def test_update_status_label_success(self):
-        """正常系: ステータスラベル更新成功"""
-        # Arrange
-        mock_status_label = Mock()
-        self.mock_master.children = {'status_label': mock_status_label}
-
-        # Act
-        self.manager._update_status_label("新しいステータス")
-
-        # Assert
-        mock_status_label.config.assert_called_once_with(text="新しいステータス")
-
-    def test_update_status_label_no_label(self):
-        """境界値: ステータスラベルが存在しない場合"""
-        # Arrange
-        self.mock_master.children = {}
-
-        # Act
-        self.manager._update_status_label("ステータス")
-
-        # Assert - エラーが発生しないことを確認
-
-    def test_update_status_label_label_without_config(self):
-        """異常系: configメソッドがないラベル"""
-        # Arrange
-        mock_invalid_label = Mock(spec=[])  # configメソッドなし
-        del mock_invalid_label.config
-        self.mock_master.children = {'status_label': mock_invalid_label}
-
-        # Act
-        self.manager._update_status_label("ステータス")
-
-        # Assert - エラーが発生しないことを確認
-
-    def test_update_status_label_empty_text(self):
-        """境界値: 空のテキスト"""
-        # Arrange
-        mock_status_label = Mock()
-        self.mock_master.children = {'status_label': mock_status_label}
-
-        # Act
-        self.manager._update_status_label("")
-
-        # Assert
-        mock_status_label.config.assert_called_once_with(text="")
 
 
 class TestCleanup:
@@ -523,33 +374,6 @@ class TestIntegrationScenarios:
         # クリーンアップ
         manager.cleanup()
         popup3.destroy.assert_called_once()
-
-    @patch('app.notification_manager.tk.Toplevel')
-    @patch('app.notification_manager.tk.Label')
-    def test_error_and_status_workflow(self, mock_label_class, mock_toplevel_class):
-        """統合テスト: エラー通知とステータス更新"""
-        # Arrange
-        manager = NotificationManager(self.mock_master, dict_to_app_config(self.mock_config))
-
-        mock_popup = Mock()
-        mock_toplevel_class.return_value = mock_popup
-        mock_label = Mock()
-        mock_label_class.return_value = mock_label
-
-        mock_status_label = Mock()
-        self.mock_master.children = {'status_label': mock_status_label}
-
-        # Act
-        # エラー通知
-        manager.show_error_message("処理失敗", "ファイルが見つかりません")
-        assert manager.current_popup == mock_popup
-
-        # ステータス更新
-        manager.show_status_message("再試行中")
-        self.mock_master.after.assert_called()
-
-        # クリーンアップ
-        manager.cleanup()
 
 
 class TestEdgeCases:

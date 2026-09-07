@@ -93,14 +93,6 @@ class AppConfig:
     def use_punctuation(self, value: bool) -> None:
         self._config['FORMATTING']['USE_PUNCTUATION'] = str(value)
 
-    @property
-    def use_comma(self) -> bool:
-        return get_config_value(self._config, 'FORMATTING', 'USE_COMMA', False)
-
-    @use_comma.setter
-    def use_comma(self, value: bool) -> None:
-        self._config['FORMATTING']['USE_COMMA'] = str(value)
-
     # --- KEYS ---
     @property
     def toggle_recording_key(self) -> str:
@@ -148,10 +140,6 @@ class AppConfig:
     @property
     def firestore_ttl_minutes(self) -> int:
         return get_config_value(self._config, 'FIRESTORE', 'TTL_MINUTES', 10)
-
-    @property
-    def viewer_base_url(self) -> str:
-        return get_config_value(self._config, 'FIRESTORE', 'VIEWER_BASE_URL', '')
 
     @property
     def presence_ping_interval(self) -> int:

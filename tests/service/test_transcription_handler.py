@@ -10,15 +10,15 @@ def _make_handler(use_punctuation: bool = False, config_dict: dict | None = None
     if config_dict is None:
         config_dict = {
             'GOOGLE_STT': {'MODEL': 'chirp_3', 'LANGUAGE': 'ja-JP'},
-            'PATHS': {'TEMP_DIR': '/test/temp'}
+            'PATHS': {'TEMP_DIR': '/test/temp'},
+            'FORMATTING': {'USE_PUNCTUATION': str(use_punctuation)}
         }
     config = dict_to_app_config(config_dict)
     client = Mock()
     audio_file_manager = Mock(spec=AudioFileManager)
     ui_processor = Mock(spec=UIQueueProcessor)
     ui_processor.is_ui_valid.return_value = True
-    ui_processor.is_shutting_down = False
-    handler = TranscriptionHandler(config, client, audio_file_manager, ui_processor, use_punctuation)
+    handler = TranscriptionHandler(config, client, audio_file_manager, ui_processor)
     return handler, config, client, audio_file_manager, ui_processor
 
 
@@ -33,7 +33,7 @@ class TestTranscriptionHandlerInit:
         assert handler.client == client
         assert handler.audio_file_manager == audio_file_manager
         assert handler.ui_processor == ui_processor
-        assert handler.use_punctuation is True
+        assert handler.config.use_punctuation is True
         assert handler.cancel_processing is False
         assert handler.processing_thread is None
 
@@ -41,7 +41,7 @@ class TestTranscriptionHandlerInit:
         """正常系: 句読点処理なしで初期化"""
         handler, *_ = _make_handler()
 
-        assert handler.use_punctuation is False
+        assert handler.config.use_punctuation is False
 
 
 class TestTranscriptionHandlerTranscribeFrames:
@@ -179,7 +179,7 @@ class TestTranscriptionHandlerHandleAudioFile:
     @patch('service.transcription_handler.process_punctuation')
     def test_handle_audio_file_success(self, mock_process_punct, mock_transcribe_audio):
         """正常系: 音声ファイル処理成功"""
-        handler, config, _, _, _ = _make_handler()
+        handler, config, _, _, ui_processor = _make_handler()
         mock_transcribe_audio.return_value = "文字起こし結果"
         mock_process_punct.return_value = "処理済み結果"
 
@@ -189,69 +189,31 @@ class TestTranscriptionHandlerHandleAudioFile:
             '/test/audio.wav', config, handler.client
         )
         mock_process_punct.assert_called_once_with("文字起こし結果", False)
-        self.mock_on_complete.assert_called_once_with("処理済み結果")
+        ui_processor.schedule_callback.assert_called_once_with(
+            self.mock_on_complete, "処理済み結果"
+        )
 
     @patch('service.transcription_handler.transcribe_audio')
     def test_handle_audio_file_transcription_fails(self, mock_transcribe_audio):
         """異常系: 文字起こし失敗"""
-        handler, _, _, _, _ = _make_handler()
+        handler, _, _, _, ui_processor = _make_handler()
         mock_transcribe_audio.return_value = None
 
         handler.handle_audio_file('/test/audio.wav', self.mock_on_complete, self.mock_on_error)
 
-        self.mock_on_error.assert_called_once_with('音声ファイルの処理に失敗しました')
+        ui_processor.schedule_callback.assert_called_once_with(
+            self.mock_on_error, '音声ファイルの処理に失敗しました'
+        )
 
     @patch('service.transcription_handler.transcribe_audio')
     def test_handle_audio_file_with_exception(self, mock_transcribe_audio):
         """異常系: 処理中に例外発生"""
-        handler, _, _, _, _ = _make_handler()
+        handler, _, _, _, ui_processor = _make_handler()
         mock_transcribe_audio.side_effect = Exception("処理エラー")
 
         handler.handle_audio_file('/test/audio.wav', self.mock_on_complete, self.mock_on_error)
 
-        self.mock_on_error.assert_called_once_with('処理エラー')
-
-
-class TestTranscriptionHandlerWaitForProcessing:
-    """TranscriptionHandlerのwait_for_processing()メソッドのテストクラス"""
-
-    def setup_method(self):
-        self.handler, *_ = _make_handler()
-
-    def test_wait_for_processing_no_thread(self):
-        """正常系: 処理スレッドなし"""
-        assert self.handler.wait_for_processing() is True
-
-    def test_wait_for_processing_thread_completes(self):
-        """正常系: 処理スレッドが完了"""
-        mock_thread = Mock()
-        mock_thread.is_alive.return_value = False
-        self.handler.processing_thread = mock_thread
-
-        assert self.handler.wait_for_processing() is True
-        mock_thread.join.assert_not_called()
-
-    def test_wait_for_processing_thread_alive(self):
-        """正常系: 処理スレッドが実行中"""
-        mock_thread = Mock()
-        mock_thread.is_alive.side_effect = [True, False]
-        self.handler.processing_thread = mock_thread
-
-        result = self.handler.wait_for_processing(timeout=1.0)
-
-        mock_thread.join.assert_called_once_with(timeout=1.0)
-        assert result is True
-
-    def test_wait_for_processing_timeout(self):
-        """異常系: タイムアウト"""
-        mock_thread = Mock()
-        mock_thread.is_alive.return_value = True
-        self.handler.processing_thread = mock_thread
-
-        result = self.handler.wait_for_processing(timeout=0.1)
-
-        mock_thread.join.assert_called_once_with(timeout=0.1)
-        assert result is False
+        ui_processor.schedule_callback.assert_called_once_with(self.mock_on_error, '処理エラー')
 
 
 class TestTranscriptionHandlerCancelAndReset:

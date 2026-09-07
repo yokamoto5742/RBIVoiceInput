@@ -5,6 +5,8 @@ from typing import Callable, Dict, Optional
 
 from google.cloud import firestore
 
+from app.ui_queue_processor import UIQueueProcessor
+from constants import TITLE_ERROR
 from service.text_transformer import remove_ja_en_spaces, replace_text
 
 
@@ -19,6 +21,7 @@ class FirestoreOutput:
             ttl_minutes: int,
             replacements: Dict[str, str],
             error_callback: Callable[[str, str], None],
+            ui_processor: UIQueueProcessor,
     ):
         self._client = client
         self._room_id = room_id
@@ -26,6 +29,11 @@ class FirestoreOutput:
         self._ttl_minutes = ttl_minutes
         self._replacements = replacements
         self._show_error = error_callback
+        self._ui_processor = ui_processor
+
+    def _notify_error(self, message: str) -> None:
+        """ワーカースレッドからの通知を Tk メインスレッドへ委譲する"""
+        self._ui_processor.schedule_callback(self._show_error, TITLE_ERROR, message)
 
     def is_available(self) -> bool:
         return self._client is not None and bool(self._room_id)
@@ -53,7 +61,7 @@ class FirestoreOutput:
         if not text:
             return
         if not self.is_available():
-            self._show_error('エラー', 'Firestore が未設定です')
+            self._notify_error('Firestore が未設定です')
             return
 
         thread = threading.Thread(
@@ -97,7 +105,7 @@ class FirestoreOutput:
             logging.info(f'Firestore追記完了: {len(chunk)}文字')
         except Exception as e:
             logging.error(f'Firestore追記中にエラー: {type(e).__name__}: {str(e)}')
-            self._show_error('エラー', f'Firestoreへの追記に失敗しました: {str(e)}')
+            self._notify_error(f'Firestoreへの追記に失敗しました: {str(e)}')
 
     def update_presence(self, recording: bool) -> None:
         """録音状態を /rooms/{room_id}/meta/state に書き込む"""
