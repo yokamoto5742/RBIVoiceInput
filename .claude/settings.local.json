@@ -12,22 +12,21 @@
       "Bash(claude config list)",
       "Bash(powershell:*)",
       "Bash(claude config get hooks)",
-      "Bash(git commit:*)",
       "Bash(dir:*)",
       "Bash(python -m pytest tests/ -v --tb=short --disable-warnings)",
       "Bash(rm:*)"
     ],
     "deny": [
-      "Bash(git push:*)",
       "Bash(git reset:*)",
       "Bash(git rebase:*)",
+      "Bash(git commit:*)",
       "Read(.env.*)",
       "Read(id_rsa)",
       "Read(id_ed25519)",
       "Read(docs/LICENSE*)",
-      "Write(.env*)",
-      "Write(docs/LICENSE*)",
-      "Write(**/secrets/**)",
+      "Edit(.env*)",
+      "Edit(docs/LICENSE*)",
+      "Edit(**/secrets/**)",
       "Bash(curl:*)",
       "Bash(npm uninstall:*)",
       "Bash(npm remove:*)",
@@ -36,6 +35,7 @@
     "ask": []
   },
   "hooks": {
+    "PostToolUse": [],
     "PermissionRequest": [
       {
         "matcher": "",
@@ -47,17 +47,7 @@
         ]
       }
     ],
-    "PreToolUse": [
-      {
-        "matcher": "AskUserQuestion",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -Command \"Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.MessageBox]::Show('Claude Codeがユーザーに質問しています', 'Claude Code - 質問', 'OK', 'Information')\""
-          }
-        ]
-      }
-    ],
+    "PreToolUse": [],
     "Stop": [
       {
         "matcher": "*",
