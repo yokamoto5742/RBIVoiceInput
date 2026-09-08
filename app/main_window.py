@@ -7,7 +7,6 @@ from app.ui_components import UIComponents
 from service.keyboard_handler import KeyboardHandler
 from service.recording_lifecycle import RecordingLifecycle
 from utils.app_config import AppConfig
-from utils.config_manager import save_config
 
 
 class VoiceInputManager:
@@ -28,7 +27,6 @@ class VoiceInputManager:
 
         self.ui_components = UIComponents(master, config, version, {
             'toggle_recording': self.toggle_recording,
-            'toggle_punctuation': self.toggle_punctuation,
             'audio_file_selected': recording_lifecycle.handle_audio_file,
             'hide_window': hide_callback,
         })
@@ -42,20 +40,10 @@ class VoiceInputManager:
             master,
             config,
             self.toggle_recording,
-            self.toggle_punctuation,
-            self.ui_components.reload_latest_audio,
-            hide_callback,
         )
 
     def toggle_recording(self) -> None:
         self.recording_lifecycle.toggle_recording()
-
-    def toggle_punctuation(self) -> None:
-        use_punctuation = not self.config.use_punctuation
-        self.config.use_punctuation = use_punctuation
-        self.ui_components.update_punctuation_button(use_punctuation)
-        logging.info(f"現在句読点: {'あり' if use_punctuation else 'なし'}")
-        save_config(self.config.raw_config)
 
     def close_application(self) -> None:
         if getattr(self, '_closed', False):

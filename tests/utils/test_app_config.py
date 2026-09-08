@@ -61,24 +61,6 @@ class TestAppConfigPaths:
         assert path == os.path.join('/mocked/meipass', 'replacements.txt')
 
 
-class TestAppConfigFormatting:
-    """フォーマット設定プロパティのテストクラス"""
-
-    def test_use_punctuation_default(self):
-        """正常系: デフォルト値"""
-        assert dict_to_app_config({}).use_punctuation is False
-
-    def test_use_punctuation_custom(self):
-        """正常系: カスタム値"""
-        config = dict_to_app_config({'FORMATTING': {'USE_PUNCTUATION': 'True'}})
-        assert config.use_punctuation is True
-
-    def test_use_punctuation_setter(self):
-        """正常系: setterで変更可能"""
-        config = dict_to_app_config({'FORMATTING': {'USE_PUNCTUATION': 'False'}})
-        config.use_punctuation = True
-        assert config.use_punctuation is True
-
 class TestAppConfigKeys:
     """キー設定プロパティのテストクラス"""
 
@@ -86,18 +68,11 @@ class TestAppConfigKeys:
         """正常系: デフォルト値"""
         config = dict_to_app_config({})
         assert config.toggle_recording_key == 'pause'
-        assert config.exit_app_key == 'esc'
-        assert config.reload_audio_key == 'f8'
-        assert config.toggle_punctuation_key == 'f9'
 
     def test_keys_custom(self):
         """正常系: カスタム値"""
-        config = dict_to_app_config({'KEYS': {
-            'TOGGLE_RECORDING': 'f1',
-            'EXIT_APP': 'f2',
-        }})
+        config = dict_to_app_config({'KEYS': {'TOGGLE_RECORDING': 'f1'}})
         assert config.toggle_recording_key == 'f1'
-        assert config.exit_app_key == 'f2'
 
 
 class TestAppConfigRecording:

@@ -19,7 +19,6 @@ def _make_lifecycle(config_dict: dict | None = None):
             'KEYS': {'TOGGLE_RECORDING': 'Pause'},
             'RECORDING': {'AUTO_STOP_TIMER': '60'},
             'PATHS': {'TEMP_DIR': '/test/temp'},
-            'FORMATTING': {'USE_PUNCTUATION': 'True'}
         }
     config = dict_to_app_config(config_dict)
     master = Mock(spec=tk.Tk)
@@ -31,7 +30,6 @@ def _make_lifecycle(config_dict: dict | None = None):
     audio_file_manager = Mock(spec=AudioFileManager)
     transcription_handler = Mock(spec=TranscriptionHandler)
     transcription_handler.processing_thread = None
-    transcription_handler.use_punctuation = True
 
     firestore_output = Mock(spec=FirestoreOutput)
     firestore_output.is_available.return_value = True

@@ -3,21 +3,6 @@ import re
 from typing import Dict
 
 
-def process_punctuation(text: str, use_punctuation: bool) -> str:
-    """句読点の有無に応じてテキストを処理する"""
-    if use_punctuation:
-        return text
-
-    try:
-        return text.replace('。', '').replace('、', '')
-    except (AttributeError, TypeError) as e:
-        logging.error(f'句読点処理中にタイプエラー: {str(e)}')
-        return text
-    except Exception as e:
-        logging.error(f'句読点処理中に予期しないエラー: {str(e)}')
-        return text
-
-
 def load_replacements(replacements_path: str) -> Dict[str, str]:
     """置換辞書ファイルを読み込む"""
     replacements: Dict[str, str] = {}

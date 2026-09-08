@@ -84,31 +84,10 @@ class AppConfig:
             return getattr(sys, '_MEIPASS', os.path.dirname(__file__))
         return os.path.normpath(os.path.join(os.path.dirname(__file__), '..', 'data'))
 
-    # --- FORMATTING ---
-    @property
-    def use_punctuation(self) -> bool:
-        return get_config_value(self._config, 'FORMATTING', 'USE_PUNCTUATION', False)
-
-    @use_punctuation.setter
-    def use_punctuation(self, value: bool) -> None:
-        self._config['FORMATTING']['USE_PUNCTUATION'] = str(value)
-
     # --- KEYS ---
     @property
     def toggle_recording_key(self) -> str:
         return get_config_value(self._config, 'KEYS', 'TOGGLE_RECORDING', 'pause')
-
-    @property
-    def exit_app_key(self) -> str:
-        return get_config_value(self._config, 'KEYS', 'EXIT_APP', 'esc')
-
-    @property
-    def reload_audio_key(self) -> str:
-        return get_config_value(self._config, 'KEYS', 'RELOAD_AUDIO', 'f8')
-
-    @property
-    def toggle_punctuation_key(self) -> str:
-        return get_config_value(self._config, 'KEYS', 'TOGGLE_PUNCTUATION', 'f9')
 
     # --- RECORDING ---
     @property
@@ -122,7 +101,7 @@ class AppConfig:
 
     @property
     def window_height(self) -> int:
-        return get_config_value(self._config, 'WINDOW', 'HEIGHT', 450)
+        return get_config_value(self._config, 'WINDOW', 'HEIGHT', 375)
 
     # --- FIRESTORE ---
     @property

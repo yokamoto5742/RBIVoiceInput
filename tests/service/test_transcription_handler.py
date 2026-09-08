@@ -6,12 +6,11 @@ from app.ui_queue_processor import UIQueueProcessor
 from tests.conftest import dict_to_app_config
 
 
-def _make_handler(use_punctuation: bool = False, config_dict: dict | None = None):
+def _make_handler(config_dict: dict | None = None):
     if config_dict is None:
         config_dict = {
             'GOOGLE_STT': {'MODEL': 'chirp_3', 'LANGUAGE': 'ja-JP'},
             'PATHS': {'TEMP_DIR': '/test/temp'},
-            'FORMATTING': {'USE_PUNCTUATION': str(use_punctuation)}
         }
     config = dict_to_app_config(config_dict)
     client = Mock()
@@ -27,21 +26,14 @@ class TestTranscriptionHandlerInit:
 
     def test_init_success(self):
         """正常系: TranscriptionHandlerの正常初期化"""
-        handler, config, client, audio_file_manager, ui_processor = _make_handler(use_punctuation=True)
+        handler, config, client, audio_file_manager, ui_processor = _make_handler()
 
         assert handler.config == config
         assert handler.client == client
         assert handler.audio_file_manager == audio_file_manager
         assert handler.ui_processor == ui_processor
-        assert handler.config.use_punctuation is True
         assert handler.cancel_processing is False
         assert handler.processing_thread is None
-
-    def test_init_with_punctuation_false(self):
-        """正常系: 句読点処理なしで初期化"""
-        handler, *_ = _make_handler()
-
-        assert handler.config.use_punctuation is False
 
 
 class TestTranscriptionHandlerTranscribeFrames:
@@ -52,14 +44,12 @@ class TestTranscriptionHandlerTranscribeFrames:
         self.mock_on_error = Mock()
 
     @patch('service.transcription_handler.transcribe_pcm')
-    @patch('service.transcription_handler.process_punctuation')
-    def test_transcribe_frames_success(self, mock_process_punct, mock_transcribe_pcm):
+    def test_transcribe_frames_success(self, mock_transcribe_pcm):
         """正常系: 音声フレームの文字起こし成功"""
         handler, config, _, audio_file_manager, ui_processor = _make_handler()
         frames = [b'audio_data_1', b'audio_data_2']
         sample_rate = 16000
         mock_transcribe_pcm.return_value = "文字起こし結果"
-        mock_process_punct.return_value = "文字起こし結果"
 
         handler.transcribe_frames(frames, sample_rate, self.mock_on_complete, self.mock_on_error)
 
@@ -67,7 +57,6 @@ class TestTranscriptionHandlerTranscribeFrames:
         mock_transcribe_pcm.assert_called_once_with(
             b'audio_data_1audio_data_2', sample_rate, config, handler.client, 1
         )
-        mock_process_punct.assert_called_once_with("文字起こし結果", False)
         ui_processor.schedule_callback.assert_called_once_with(
             self.mock_on_complete, "文字起こし結果"
         )
@@ -134,13 +123,9 @@ class TestTranscriptionHandlerTranscribeFrames:
         ui_processor.schedule_callback.assert_not_called()
 
     @patch('service.transcription_handler.transcribe_pcm')
-    @patch('service.transcription_handler.process_punctuation')
-    def test_transcribe_frames_cancelled_before_ui_update(
-        self, mock_process_punct, mock_transcribe_pcm
-    ):
+    def test_transcribe_frames_cancelled_before_ui_update(self, mock_transcribe_pcm):
         """異常系: UI更新前にキャンセル"""
         handler, _, _, _, ui_processor = _make_handler()
-        mock_process_punct.return_value = "結果"
 
         def cancel_after_transcribe(*_, **__):
             handler.cancel_processing = True
@@ -176,21 +161,18 @@ class TestTranscriptionHandlerHandleAudioFile:
         self.mock_on_error = Mock()
 
     @patch('service.transcription_handler.transcribe_audio')
-    @patch('service.transcription_handler.process_punctuation')
-    def test_handle_audio_file_success(self, mock_process_punct, mock_transcribe_audio):
+    def test_handle_audio_file_success(self, mock_transcribe_audio):
         """正常系: 音声ファイル処理成功"""
         handler, config, _, _, ui_processor = _make_handler()
         mock_transcribe_audio.return_value = "文字起こし結果"
-        mock_process_punct.return_value = "処理済み結果"
 
         handler.handle_audio_file('/test/audio.wav', self.mock_on_complete, self.mock_on_error)
 
         mock_transcribe_audio.assert_called_once_with(
             '/test/audio.wav', config, handler.client
         )
-        mock_process_punct.assert_called_once_with("文字起こし結果", False)
         ui_processor.schedule_callback.assert_called_once_with(
-            self.mock_on_complete, "処理済み結果"
+            self.mock_on_complete, "文字起こし結果"
         )
 
     @patch('service.transcription_handler.transcribe_audio')

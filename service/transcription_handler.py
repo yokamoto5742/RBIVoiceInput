@@ -6,7 +6,6 @@ from typing import Any, Callable, List, Optional
 from app.ui_queue_processor import UIQueueProcessor
 from external_service.google_stt_api import transcribe_audio, transcribe_pcm
 from service.audio_file_manager import AudioFileManager
-from service.text_transformer import process_punctuation
 from utils.app_config import AppConfig
 
 
@@ -65,11 +64,6 @@ class TranscriptionHandler:
             if not transcription:
                 raise ValueError('音声ファイルの文字起こしに失敗しました')
 
-            use_punctuation = self.config.use_punctuation
-            logging.debug(f'句読点処理開始: use_punctuation={use_punctuation}')
-            transcription = process_punctuation(transcription, use_punctuation)
-            logging.debug('句読点処理完了')
-
             if self.cancel_processing:
                 logging.info('処理がキャンセルされました')
                 return
@@ -99,7 +93,6 @@ class TranscriptionHandler:
             if not transcription:
                 raise ValueError('音声ファイルの処理に失敗しました')
 
-            transcription = process_punctuation(transcription, self.config.use_punctuation)
             self.ui_processor.schedule_callback(on_complete, transcription)
         except Exception as e:
             logging.error(f'音声ファイル処理中にエラー: {str(e)}')

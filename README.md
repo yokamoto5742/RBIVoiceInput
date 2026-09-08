@@ -350,4 +350,3 @@ Google Cloud Speech-to-Text と Firestore をご利用の際は、個人を特�
 詳細は、Google Cloud の公式サイトにてプライバシーポリシーおよび利用規約をご確認ください。Firestore のデータ削除ポリシーについても事前に確認してください。
 
 <div align="right"><a href="#目次">▲ 目次へ戻る</a></div>
-"# RBIVoiceInput" 
