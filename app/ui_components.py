@@ -6,7 +6,7 @@ from tkinter import filedialog, messagebox
 from typing import Callable, Dict, Optional
 
 from app.replacements_editor import ReplacementsEditor
-from constants import (
+from utils.constants import (
     MSG_AUDIO_FILE_NOT_FOUND,
     TITLE_WARNING,
     idle_status,

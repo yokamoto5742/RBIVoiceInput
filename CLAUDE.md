@@ -47,5 +47,5 @@ utils/        Config, logging, .env loading
 - Type hints required on all parameters and return values
 - Functions ≤ 50 lines; single clear purpose per function/module
 - Import order: stdlib → third-party → local (alphabetical within each group; `import` before `from`)
-- UI-displayed messages must be in Japanese, defined as constants in `constants.py` — no magic strings
+- UI-displayed messages must be in Japanese, defined as constants in `utils/constants.py` — no magic strings
 - Comments only for non-obvious logic, written in Japanese; minimal docstrings

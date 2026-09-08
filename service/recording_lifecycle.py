@@ -6,7 +6,7 @@ import tkinter as tk
 from typing import Any, Callable, Optional
 
 from app.ui_queue_processor import UIQueueProcessor
-from constants import (
+from utils.constants import (
     MSG_AUDIO_FILE_NOT_FOUND,
     MSG_AUDIO_FILE_PROCESSING,
     MSG_RECORDING,

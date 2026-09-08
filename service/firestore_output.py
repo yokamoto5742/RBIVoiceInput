@@ -6,7 +6,7 @@ from typing import Callable, Dict, Optional
 from google.cloud import firestore
 
 from app.ui_queue_processor import UIQueueProcessor
-from constants import TITLE_ERROR
+from utils.constants import TITLE_ERROR
 from service.text_transformer import remove_ja_en_spaces, replace_text
 
 
